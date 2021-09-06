@@ -23,7 +23,7 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
      * @param deadline deadline timestamp
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokens deposited.
-    */
+     */
     function buyJuniorTokensRaw(
         address token,
         address sy,
@@ -33,19 +33,18 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
         uint256 getId,
         uint256 setId
     ) public payable returns (string memory _eventName, bytes memory _eventParam) {
+        uint256 _amt = getUint(getId, amt);
 
-        uint _amt = getUint(getId, amt);
-       
         SmartYieldInterface smartYield = SmartYieldInterface(sy);
         TokenInterface tokenContract = TokenInterface(token);
 
-        _amt = _amt == uint(-1) ? tokenContract.balanceOf(address(this)) : _amt;
+        _amt = _amt == uint256(-1) ? tokenContract.balanceOf(address(this)) : _amt;
 
         approve(tokenContract, smartYield.pool(), _amt);
 
-        uint initialBal = tokenContract.balanceOf(address(this));
-        smartYield.buyTokens(_amt,minTokens,deadline);
-        uint finalBal = tokenContract.balanceOf(address(this));
+        uint256 initialBal = tokenContract.balanceOf(address(this));
+        smartYield.buyTokens(_amt, minTokens, deadline);
+        uint256 finalBal = tokenContract.balanceOf(address(this));
 
         _amt = sub(initialBal, finalBal);
 
@@ -65,7 +64,7 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
      * @param deadline deadline timestamp
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokens deposited.
-    */
+     */
     function buyJuniorTokens(
         string calldata tokenId,
         uint256 amt,
@@ -75,13 +74,13 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
         uint256 setId
     ) external payable returns (string memory _eventName, bytes memory _eventParam) {
         (address token, , address smartYield) = bbMapping.getMapping(tokenId);
-        (_eventName, _eventParam) = buyJuniorTokensRaw(token,smartYield,amt,minTokens,deadline,getId, setId);
+        (_eventName, _eventParam) = buyJuniorTokensRaw(token, smartYield, amt, minTokens, deadline, getId, setId);
     }
 
     /**
      * @dev sell jTokens instantly
      * @notice A junior token holder has the option to sell his tokens before maturity,
-     *  but he will have to forfeit his potential future gain in order to protect the senior bond holders’ guaranteed gains. 
+     *  but he will have to forfeit his potential future gain in order to protect the senior bond holders’ guaranteed gains.
      * @param token The address of the token to withdraw.
      * @param sy smart yield contract address.
      * @param amt The amount of the token to withdraw. (For max: `uint256(-1)`)
@@ -89,7 +88,7 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
      * @param deadline deadline timestamp
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokens withdrawn.
-    */
+     */
     function sellJuniorTokensRaw(
         address token,
         address sy,
@@ -99,26 +98,21 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
         uint256 getId,
         uint256 setId
     ) public payable returns (string memory _eventName, bytes memory _eventParam) {
-        uint _amt = getUint(getId, amt);
+        uint256 _amt = getUint(getId, amt);
 
         SmartYieldInterface smartYield = SmartYieldInterface(sy);
         TokenInterface tokenContract = TokenInterface(token);
 
-        _amt = _amt == uint(-1) ? smartYield.balanceOf(address(this)) : _amt;
+        _amt = _amt == uint256(-1) ? smartYield.balanceOf(address(this)) : _amt;
 
-        uint _tokenAmt = wdiv(_amt,sub(
-            smartYield.price(),
-        wdiv(
-            smartYield.abondDebt(),
-            smartYield.totalSupply()
-        )));
+        uint256 _tokenAmt = wdiv(_amt, sub(smartYield.price(), wdiv(smartYield.abondDebt(), smartYield.totalSupply())));
 
-        uint initialBal = tokenContract.balanceOf(address(this));
+        uint256 initialBal = tokenContract.balanceOf(address(this));
         smartYield.sellTokens(_tokenAmt, minUnderlying, deadline);
-        uint finalBal = tokenContract.balanceOf(address(this));
+        uint256 finalBal = tokenContract.balanceOf(address(this));
 
         _amt = sub(finalBal, initialBal);
-        
+
         setUint(setId, _amt);
 
         _eventName = "LogSellJuniorTokens(address,uint256,uint256,uint256)";
@@ -128,14 +122,14 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
     /**
      * @dev sell jTokens instantly
      * @notice A junior token holder has the option to sell his tokens before maturity,
-     *  but he will have to forfeit his potential future gain in order to protect the senior bond holders’ guaranteed gains. 
+     *  but he will have to forfeit his potential future gain in order to protect the senior bond holders’ guaranteed gains.
      * @param tokenId id
      * @param amt The amount of the token to withdraw. (For max: `uint256(-1)`)
      * @param minTokens minimum output tokens
      * @param deadline deadline timestamp
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokens withdrawn.
-    */
+     */
     function sellJuniorTokens(
         string calldata tokenId,
         uint256 amt,
@@ -145,10 +139,10 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
         uint256 setId
     ) external payable returns (string memory _eventName, bytes memory _eventParam) {
         (address token, , address smartYield) = bbMapping.getMapping(tokenId);
-        (_eventName, _eventParam) = sellJuniorTokensRaw(token,smartYield,amt,minTokens,deadline,getId, setId);
+        (_eventName, _eventParam) = sellJuniorTokensRaw(token, smartYield, amt, minTokens, deadline, getId, setId);
     }
 
- /**
+    /**
      * @dev Purchase a senior bond
      * @notice A bond carries principal, gain, issuance timestamp, maturity timestamp and liquidation control
      * @param token The address of the underlying ERC20 token to deposit.
@@ -159,33 +153,32 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
      * @param forDays bond life days
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokens deposited.
-    */
+     */
     function buySeniorBond(
         address token,
-        address sy,      
-        uint256 amt, 
+        address sy,
+        uint256 amt,
         uint256 minGain,
         uint256 deadline,
         uint16 forDays,
         uint256 getId,
         uint256 setId
     ) external payable returns (string memory _eventName, bytes memory _eventParam) {
-        uint _amt = getUint(getId, amt);
-       
+        uint256 _amt = getUint(getId, amt);
+
         SmartYieldInterface smartYield = SmartYieldInterface(sy);
         TokenInterface tokenContract = TokenInterface(token);
 
-        _amt = _amt == uint(-1) ? tokenContract.balanceOf(address(this)) : _amt;
+        _amt = _amt == uint256(-1) ? tokenContract.balanceOf(address(this)) : _amt;
 
         approve(tokenContract, smartYield.pool(), _amt);
-        uint bondId = smartYield.buyBond(_amt,minGain,deadline,forDays);
+        uint256 bondId = smartYield.buyBond(_amt, minGain, deadline, forDays);
 
         setUint(setId, bondId);
 
         _eventName = "LogBuySeniorBond(address,uint256,uint256,uint256)";
-        _eventParam = abi.encode(sy,bondId, getId, setId);
+        _eventParam = abi.encode(sy, bondId, getId, setId);
     }
-
 
     /**
      * @dev redeem Senior Bond
@@ -194,14 +187,14 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
      * @param bondId the ERC721 bond id.
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokens withdrawn.
-    */
+     */
     function redeemSeniorBond(
         address sy,
         uint256 bondId,
         uint256 getId,
         uint256 setId
     ) external payable returns (string memory _eventName, bytes memory _eventParam) {
-        uint _bondId = getUint(getId, bondId);
+        uint256 _bondId = getUint(getId, bondId);
 
         SmartYieldInterface smartYield = SmartYieldInterface(sy);
 
@@ -212,7 +205,7 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
     }
 
     /**
-     * @dev buy junior Bond. In order to not forfeit his gain,a jToken holder can mint a junior bond using his jTokens, which he can only redeem on maturity. 
+     * @dev buy junior Bond. In order to not forfeit his gain,a jToken holder can mint a junior bond using his jTokens, which he can only redeem on maturity.
      * @notice jTokens are transferred to the contract and a junior bond is minted for the user.
      * @param sy smart yield contract address.
      * @param amt The address of the token to deposit.
@@ -220,25 +213,25 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
      * @param deadline deadline timestamp
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokens deposited.
-    */
-    function buyJuniorBond( 
-        address sy, 
+     */
+    function buyJuniorBond(
+        address sy,
         uint256 amt,
         uint256 maxMaturesAt,
         uint256 deadline,
         uint256 getId,
         uint256 setId
     ) external payable returns (string memory _eventName, bytes memory _eventParam) {
-        uint _amt = getUint(getId, amt);
-       
+        uint256 _amt = getUint(getId, amt);
+
         SmartYieldInterface smartYield = SmartYieldInterface(sy);
 
-        _amt = _amt == uint(-1) ? smartYield.balanceOf(address(this)) : _amt;
+        _amt = _amt == uint256(-1) ? smartYield.balanceOf(address(this)) : _amt;
 
         // approve(TokenInterface(sy), sy, _amt);
-        uint initialBal = smartYield.balanceOf(address(this));
-        smartYield.buyJuniorBond(_amt,maxMaturesAt, deadline);
-        uint finalBal = smartYield.balanceOf(address(this));
+        uint256 initialBal = smartYield.balanceOf(address(this));
+        smartYield.buyJuniorBond(_amt, maxMaturesAt, deadline);
+        uint256 finalBal = smartYield.balanceOf(address(this));
 
         _amt = sub(initialBal, finalBal);
 
@@ -255,15 +248,15 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
      * @param jBondId The bond id
      * @param getId ID to retrieve amt.
      * @param setId ID stores the amount of tokeaarns deposited.
-    */
-    function redeemJuniorBond( 
-        address sy, 
+     */
+    function redeemJuniorBond(
+        address sy,
         uint256 jBondId,
         uint256 getId,
         uint256 setId
     ) external payable returns (string memory _eventName, bytes memory _eventParam) {
-        uint _jBondId = getUint(getId, jBondId);
-       
+        uint256 _jBondId = getUint(getId, jBondId);
+
         SmartYieldInterface smartYield = SmartYieldInterface(sy);
 
         smartYield.redeemJuniorBond(jBondId);
@@ -271,9 +264,8 @@ abstract contract BarnBridgeSmartYieldResolver is Events, Helpers {
         _eventName = "LogRedeemJuniorBond(address,uint256,uint256,uint256)";
         _eventParam = abi.encode(sy, _jBondId, getId, setId);
     }
-
 }
 
 contract ConnectV2BarnBridgeSmartYield is BarnBridgeSmartYieldResolver {
-    string constant public name = "BarnBridgeSmartYield-v1.0";
+    string public constant name = "BarnBridgeSmartYield-v1.0";
 }
